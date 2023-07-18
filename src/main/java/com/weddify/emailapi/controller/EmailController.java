@@ -3,24 +3,33 @@ package com.weddify.emailapi.controller;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import javax.mail.MessagingException;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.PropertySource;
 import org.springframework.web.bind.annotation.RestController;
 import com.weddify.emailapi.entity.User;
 import com.weddify.emailapi.service.EmailService;
 
 @RestController
+@PropertySource("classpath:application.properties")
 public class EmailController {
 
     @Autowired
     private EmailService EmailService;
 
-    @RequestMapping("/welcome")
-    public void welcome(){
-        this.EmailService.sendEmail("Welcome","Welcome to my email service","sparsh.kr14@gmail.com");
+    @Value("${spring.mail.username}")
+    private String to;
+    
+    @RabbitListener(queues = "contactus")
+    public void contactusEmail(byte[] byteArr) throws MessagingException, UnsupportedEncodingException, JsonMappingException, JsonProcessingException {
+    	ObjectMapper objectMapper = new ObjectMapper();
+		String jsonStr = new String(byteArr, "UTF-8");
+		User user = objectMapper.readValue(jsonStr, User.class);
+		EmailService.sendEmail(user, "ContactUsEmail", to);
     }
 
     @RabbitListener(queues = "register")
@@ -41,11 +50,10 @@ public class EmailController {
         	ObjectMapper objectMapper = new ObjectMapper();
         	String jsonStr = new String(byteArr, "UTF-8");
         	User user = objectMapper.readValue(jsonStr, User.class);
-            this.EmailService.sendEmail(user, "BookingEmail");
-        } catch (MessagingException e) {
+            this.EmailService.sendEmailWithAttachment(user, "BookingEmail");
+        } catch (MessagingException | IOException e) {
             e.printStackTrace();
         }
-        
     }
     
     @RabbitListener(queues = "bookvendor")
@@ -58,7 +66,6 @@ public class EmailController {
         } catch (MessagingException e) {
             e.printStackTrace();
         }
-        
     }
 
     @RabbitListener(queues = "cancelbook")
@@ -71,7 +78,6 @@ public class EmailController {
         } catch (MessagingException e) {
             e.printStackTrace();
         }
-        
     }
 
     @RabbitListener(queues = "cancelbookvendor")
@@ -84,7 +90,6 @@ public class EmailController {
         } catch (MessagingException e) {
             e.printStackTrace();
         }
-        
     }
 
     @RabbitListener(queues = "delete")
@@ -97,7 +102,6 @@ public class EmailController {
         } catch (MessagingException e) {
             e.printStackTrace();
         }
-        
     }
 
     @RabbitListener(queues = "resetpwd")
@@ -110,6 +114,5 @@ public class EmailController {
         } catch (MessagingException e) {
             e.printStackTrace();
         }
-        
     }
 }

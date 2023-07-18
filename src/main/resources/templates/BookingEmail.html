@@ -9,7 +9,9 @@
 <body>
 <div style="margin-top: 10px">Congratulations, <b th:text="${user.firstname}"></b></div>
 <br>
-<div>Thank you for booking from Weddify!. Your service <b th:text="${user.servicetitle}"></b> has been booked succesfully. <p>You will receive another email from PayTM containing your Booking Invoice.</p></div>
+<div>Thank you for booking from Weddify!. 
+You have book service <b th:text="${user.servicetitle}"></b> succesfully. The Order ID is <b th:text="${user.lastname}"></b>.
+<p>We will get in touch with you soon. Please find the attached Booking Invoice.</p></div>
 <br/>
 <div> Hope to see you again. Have a nice day.</div>
 </body>

@@ -1,12 +1,12 @@
 package com.weddify.emailapi.service;
 
-import java.io.File;
+import java.io.IOException;
+import java.net.URL;
+import javax.activation.DataSource;
+import javax.activation.URLDataSource;
 import javax.mail.MessagingException;
 import javax.mail.internet.MimeMessage;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.core.io.FileSystemResource;
-import org.springframework.mail.MailException;
-import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
@@ -23,31 +23,49 @@ public class EmailService {
     private TemplateEngine templateEngine;
 
     
-    public void sendEmail(String subject, String text, String to){
+    public void sendEmail(User user, String templateName, String to) {
         try {
-            SimpleMailMessage message = new SimpleMailMessage(); 
-            message.setFrom("YOUR-EMAIL-ADDRESS-HERE");
-            message.setTo(to); 
-            message.setSubject(subject); 
-            message.setText(text);
+        	Context context = new Context();
+            context.setVariable("user", user);
+
+            String process = templateEngine.process(templateName, context);
+            MimeMessage message = mailsender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message);
+            helper.setSubject("New Message from " + user.getFirstname());
+            helper.setText(process, true);
+            helper.setTo(to);
+            helper.setFrom("YOUR-EMAIL-ADDRESS-HERE");
             mailsender.send(message);
-        } catch (MailException exception) {
+        } catch (MessagingException exception) {
             exception.printStackTrace();
         }
     }
 
-    public void sendEmailWithAttachment(String subject, String text, String to, String pathToAttachment) {
+    public void sendEmailWithAttachment(User user, String templateName) throws MessagingException, IOException {
         try {
+        	Context context = new Context();
+            context.setVariable("user", user);
+
+            String process = templateEngine.process(templateName, context);
             MimeMessage message = mailsender.createMimeMessage();
             MimeMessageHelper helper;
             helper = new MimeMessageHelper(message, true);
+            helper.setSubject("Hello " + user.getFirstname());
+            helper.setText(process, true);
+            helper.setTo(user.getEmail());
             helper.setFrom("YOUR-EMAIL-ADDRESS-HERE");
-            helper.setTo(to);
-            helper.setSubject(subject);
-            helper.setText(text);
                 
-            FileSystemResource file = new FileSystemResource(new File(pathToAttachment));
-            helper.addAttachment("Invoice", file);
+         // Extract the filename from the S3 URL and limit it to the substring before ".pdf" extension
+            String filename = user.getUsername().substring(user.getUsername().lastIndexOf('/') + 1);
+            int dotIndex = filename.lastIndexOf(".pdf");
+            if (dotIndex > 0) {
+                filename = filename.substring(0, dotIndex + 4);  // Include the ".pdf" extension
+            }
+
+            // Attach the PDF file from the S3 URL with the extracted filename
+            URL url = new URL(user.getUsername());
+            DataSource source = new URLDataSource(url);
+            helper.addAttachment(filename, source);
 
             mailsender.send(message);
         } 
